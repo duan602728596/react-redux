@@ -2,14 +2,17 @@ import React, { Context, ReactNode, useMemo } from 'react'
 import { ReactReduxContext, ReactReduxContextValue } from './Context'
 import { createSubscription } from '../utils/Subscription'
 import { useIsomorphicLayoutEffect } from '../utils/useIsomorphicLayoutEffect'
-import type { FixTypeLater } from '../types'
 import { Action, AnyAction, Store } from 'redux'
 
-export interface ProviderProps<A extends Action = AnyAction> {
+export interface ProviderProps<A extends Action = AnyAction, S = unknown> {
   /**
    * The single Redux store in your application.
    */
-  store: Store<FixTypeLater, A>
+  store: Store<S, A>
+  /**
+   * An optional server state snapshot. Will be used during initial hydration render if available, to ensure that the UI output is consistent with the HTML generated on the server.
+   */
+  serverState?: S
   /**
    * Optional context to be used internally in react-redux. Use React.createContext() to create a context to be used.
    * If this is used, you'll need to customize `connect` by supplying the same context provided to the Provider.
@@ -19,14 +22,15 @@ export interface ProviderProps<A extends Action = AnyAction> {
   children: ReactNode
 }
 
-function Provider({ store, context, children }: ProviderProps) {
-  const contextValue = useMemo(() => {
+function Provider({ store, context, children, serverState }: ProviderProps) {
+  const contextValue: ReactReduxContextValue = useMemo(() => {
     const subscription = createSubscription(store)
     return {
       store,
       subscription,
+      getServerState: serverState ? () => serverState : undefined,
     }
-  }, [store])
+  }, [store, serverState])
 
   const previousState = useMemo(() => store.getState(), [store])
 
